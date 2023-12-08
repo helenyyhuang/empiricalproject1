@@ -1,0 +1,1169 @@
+--------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/yyy/Desktop/project1/empiricalproject1_helen.log
+  log type:  text
+ opened on:   7 Dec 2023, 17:16:01
+
+. 
+. * Load the dataset
+. use "`datapath'`dataset'", clear
+
+. 
+. * Error checking after loading data to ensure the file exists and is not
+>  empty
+. if _rc {
+.     di "Error: Dataset could not be loaded. Please check the file path."
+.     exit 1
+. }
+
+. 
+. * Question 3: Upward Mobility Analysis
+. * -----------------------------------
+. * Compare upward mobility in Tract 24510130600 to state and U.S. average
+> s
+. 
+. * Calculate the average upward mobility for children with parents at the
+>  25th percentile (kfr_pooled_p25) in Tract 24510130600, Hampden, Baltimo
+> re, MD
+. sum kfr_pooled_p25 if state == 24 & county == 510 & tract == 130600 [aw 
+> = count_pooled ]
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~25 |       1         738    25110.69          .   25110.69   251
+> 10.69
+
+. local tract_weighted_avg = r(mean)
+
+. 
+. * Calculate the population-weighted average of the variable "kfr_pooled_
+> p25" for Maryland
+. sum kfr_pooled_p25 if state == 24 [aw=count_pooled] 
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~25 |   1,383     1355668    34371.71   8204.687   16364.33   694
+> 29.39
+
+. local weighted_sum_maryland = r(sum)
+
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_count_maryland = r(sum)
+
+. local maryland_weighted_avg = `weighted_sum_maryland' / `total_count_mar
+> yland'
+
+. 
+. * Calculate the population-weighted average of the variable "kfr_pooled_
+> p25" for the entire U.S.
+. sum kfr_pooled_p25 [aw=count_pooled]
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~25 |  71,923    72229071    34311.68   7899.586          0   105
+> 732.4
+
+. local weighted_sum_us = r(sum)
+
+. sum count_pooled
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_count_us = r(sum)
+
+. local us_weighted_avg = `weighted_sum_us' / `total_count_us'
+
+. 
+. * Display results
+. display "The population-weighted average kfr_pooled_p25 for Tract 245101
+> 30600 is `tract_weighted_avg'"
+The population-weighted average kfr_pooled_p25 for Tract 24510130600 is 25
+> 110.693359375
+
+. display "The population-weighted average kfr_pooled_p25 for Maryland is 
+> `maryland_weighted_avg'"
+The population-weighted average kfr_pooled_p25 for Maryland is 34359.26683
+> 775563
+
+. display "The population-weighted average kfr_pooled_p25 for the U.S. is 
+> `us_weighted_avg'"
+The population-weighted average kfr_pooled_p25 for the U.S. is 34293.47554
+> 982916
+
+. 
+. * Question 4: Variability Analysis
+. * -------------------------------
+. * Compare standard deviations of upward mobility
+. 
+. * Calculate the weighted kfr for each observation for the 25th percentil
+> e
+. gen weighted_kfr = kfr_pooled_p25 * count_pooled if !missing(kfr_pooled_
+> p25) & !missing(count_pooled)
+(1,331 missing values generated)
+
+. 
+. * Calculate the weighted mean of kfr for for the 25th percentile for Bal
+> timore County, Maryland, and the US
+. egen sum_weighted_kfr_balt = total(weighted_kfr) if state == 24 & county
+>  == 510
+(73,078 missing values generated)
+
+. egen sum_weights_balt = total(count_pooled) if state == 24 & county == 5
+> 10
+(73,078 missing values generated)
+
+. gen weight_mean_kfr_balt = sum_weighted_kfr_balt / sum_weights_balt if !
+> missing(sum_weights_balt)
+(73,078 missing values generated)
+
+. 
+. egen sum_weighted_kfr_md = total(weighted_kfr) if state == 24
+(71,887 missing values generated)
+
+. egen sum_weights_md = total(count_pooled) if state == 24
+(71,887 missing values generated)
+
+. gen weight_mean_kfr_md = sum_weighted_kfr_md / sum_weights_md if !missin
+> g(sum_weights_md)
+(71,887 missing values generated)
+
+. 
+. egen sum_weighted_kfr_us = total(weighted_kfr)
+
+. egen sum_weights_us = total(count_pooled)
+
+. gen weight_mean_kfr_us = sum_weighted_kfr_us / sum_weights_us if !missin
+> g(sum_weights_us)
+
+. 
+. * Calculate the deviation and weighted sum of squared deviations for the
+>  25th percentile for Baltimore County, Maryland, and the US
+. gen deviation_balt = kfr_pooled_p25 - weight_mean_kfr_balt if state == 2
+> 4 & county == 510 & !missing(kfr_pooled_p25)
+(73,079 missing values generated)
+
+. gen weighted_dev_sq_balt = deviation_balt^2 * count_pooled if state == 2
+> 4 & county == 510 & !missing(deviation_balt)
+(73,079 missing values generated)
+
+. egen total_wdev_sq_balt = total(weighted_dev_sq_balt) if state == 24 & c
+> ounty == 510
+(73,078 missing values generated)
+
+. 
+. gen deviation_md = kfr_pooled_p25 - weight_mean_kfr_md if state == 24 & 
+> !missing(kfr_pooled_p25)
+(71,895 missing values generated)
+
+. gen weighted_dev_sq_md = deviation_md^2 * count_pooled if state == 24 & 
+> !missing(deviation_md)
+(71,895 missing values generated)
+
+. egen total_wdev_sq_md = total(weighted_dev_sq_md) if state == 24
+(71,887 missing values generated)
+
+. 
+. gen deviation_us = kfr_pooled_p25 - weight_mean_kfr_us if !missing(kfr_p
+> ooled_p25)
+(1,267 missing values generated)
+
+. gen weighted_dev_sq_us = deviation_us^2 * count_pooled if !missing(devia
+> tion_us)
+(1,331 missing values generated)
+
+. egen total_wdev_sq_us = total(weighted_dev_sq_us)
+
+. 
+. * Calculate the total weights and the total weighted sum of squared devi
+> ations for the 25th percentile for Baltimore County, Maryland, and the U
+> S
+. sum count_pooled if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |        200     806.755    404.1614         13       1788
+
+. local total_weight_balt = r(sum)
+
+. sum weighted_dev_sq_balt if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+weighted_d~t |        199    1.93e+10    5.78e+10    5194923   5.32e+11
+
+. local total_dev_sq_balt = r(sum)
+
+. 
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_weight_md = r(sum)
+
+. sum weighted_dev_sq_md if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+weighted_d~d |      1,383    6.59e+10    1.10e+11   396122.3   1.37e+12
+
+. local total_dev_sq_md = r(sum)
+
+. 
+. sum count_pooled 
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_weight_us = r(sum)
+
+. sum weighted_dev_sq_us
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+weighted_d~s |     71,947    6.26e+10    1.14e+11          0   3.23e+12
+
+. local total_dev_sq_us = r(sum)
+
+. 
+. * Calculate the weighted standard deviation for the 25th percentile for 
+> Baltimore County, Maryland, and the US
+. local std_dev_balt = sqrt(`total_dev_sq_balt' / `total_weight_balt')
+
+. local std_dev_md = sqrt(`total_dev_sq_md' / `total_weight_md')
+
+. local std_dev_us = sqrt(`total_dev_sq_us' / `total_weight_us')
+
+. 
+. * Display the results
+. display "Weighted Standard Deviation for Baltimore County at the 25th pe
+> rcentile: " `std_dev_balt'
+Weighted Standard Deviation for Baltimore County at the 25th percentile: 4
+> 881.6067
+
+. display "Weighted Standard Deviation for Maryland State at the 25th perc
+> entile: " `std_dev_md'
+Weighted Standard Deviation for Maryland State at the 25th percentile: 820
+> 0.2447
+
+. display "Weighted Standard Deviation for U.S. at the 25th percentile: " 
+> `std_dev_us'
+Weighted Standard Deviation for U.S. at the 25th percentile: 7897.4559
+
+. 
+. * Question 5: Downward Mobility Analysis & Variability Analysis
+. * -----------------------------------
+. * Compare the downward mobility and its standard deviations in Tract 245
+> 10130600 to the state and U.S. averages
+. 
+. * Calculate the average downward mobility for children with parents at t
+> he 75th percentile (kfr_pooled_p75) in Tract 24510130600, Hampden, Balti
+> more, MD
+. sum kfr_pooled_p75 if state == 24 & county == 510 & tract == 130600 [aw 
+> = count_pooled ] 
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~75 |       1         738    53955.42          .   53955.42   539
+> 55.42
+
+. local tract_weighted_avg_p75 = r(mean)
+
+. 
+. * Calculate the population-weighted average of "kfr_pooled_p75" for Mary
+> land
+. sum kfr_pooled_p75 if state == 24 [aw=count_pooled] 
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~75 |   1,383     1355668    51477.96   9990.179   156.9863   830
+> 57.49
+
+. local weighted_sum_maryland = r(sum)
+
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_count_maryland = r(sum)
+
+. local maryland_weighted_avg = `weighted_sum_maryland' / `total_count_mar
+> yland'
+
+. 
+. * Calculate the population-weighted average of "kfr_pooled_p75" for the 
+> entire U.S.
+. sum kfr_pooled_p75 [aw=count_pooled] 
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_poole~75 |  71,925    72229817    51284.03   9326.094   156.9863     1
+> 37454
+
+. local weighted_sum_us = r(sum)
+
+. sum count_pooled
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_count_us = r(sum)
+
+. local us_weighted_avg = `weighted_sum_us' / `total_count_us'
+
+. 
+. * Display results
+. display "The population-weighted average kfr_pooled_p75 for Tract 245101
+> 30600 is `tract_weighted_avg_p75'"
+The population-weighted average kfr_pooled_p75 for Tract 24510130600 is 53
+> 955.421875
+
+. display "The population-weighted average kfr_pooled_p75 for Maryland is 
+> `maryland_weighted_avg'"
+The population-weighted average kfr_pooled_p75 for Maryland is 51459.32468
+> 487031
+
+. display "The population-weighted average kfr_pooled_p75 for the U.S. is 
+> `us_weighted_avg'"
+The population-weighted average kfr_pooled_p75 for the U.S. is 51257.34369
+> 847306
+
+. 
+. * Calculate the weighted kfr for each observation for the 75th percentil
+> e
+. gen weighted_kfr_p75 = kfr_pooled_p75 * count_pooled if !missing(kfr_poo
+> led_p75) & !missing(count_pooled)
+(1,328 missing values generated)
+
+. 
+. * Calculate the weighted mean of kfr for the 75th percentile for Baltimo
+> re County, Maryland, and the US
+. egen sum_weighted_kfr_balt_p75 = total(weighted_kfr_p75) if state == 24 
+> & county == 510
+(73,078 missing values generated)
+
+. egen sum_weights_balt_p75 = total(count_pooled) if state == 24 & county 
+> == 510
+(73,078 missing values generated)
+
+. gen weight_mean_kfr_balt_p75 = sum_weighted_kfr_balt_p75 / sum_weights_b
+> alt_p75 if !missing(sum_weights_balt_p75)
+(73,078 missing values generated)
+
+. 
+. egen sum_weighted_kfr_md_p75 = total(weighted_kfr_p75) if state == 24
+(71,887 missing values generated)
+
+. egen sum_weights_md_p75 = total(count_pooled) if state == 24
+(71,887 missing values generated)
+
+. gen weight_mean_kfr_md_p75 = sum_weighted_kfr_md_p75 / sum_weights_md_p7
+> 5 if !missing(sum_weights_md_p75)
+(71,887 missing values generated)
+
+. 
+. egen sum_weighted_kfr_us_p75 = total(weighted_kfr_p75)
+
+. egen sum_weights_us_p75 = total(count_pooled)
+
+. gen weight_mean_kfr_us_p75 = sum_weighted_kfr_us_p75 / sum_weights_us_p7
+> 5 if !missing(sum_weights_us_p75)
+
+. 
+. * Calculate the deviation and weighted sum of squared deviations for the
+>  75th percentile for Baltimore County, Maryland, and the US
+. gen deviation_balt_p75 = kfr_pooled_p75 - weight_mean_kfr_balt_p75 if st
+> ate == 24 & county == 510 & !missing(kfr_pooled_p75)
+(73,079 missing values generated)
+
+. gen weighted_dev_sq_balt_p75 = deviation_balt_p75^2 * count_pooled if st
+> ate == 24 & county == 510 & !missing(deviation_balt_p75)
+(73,079 missing values generated)
+
+. egen total_wdev_sq_balt_p75 = total(weighted_dev_sq_balt_p75) if state =
+> = 24 & county == 510
+(73,078 missing values generated)
+
+. 
+. gen deviation_md_p75 = kfr_pooled_p75 - weight_mean_kfr_md_p75 if state 
+> == 24 & !missing(kfr_pooled_p75)
+(71,895 missing values generated)
+
+. gen weighted_dev_sq_md_p75 = deviation_md_p75^2 * count_pooled if state 
+> == 24 & !missing(deviation_md_p75)
+(71,895 missing values generated)
+
+. egen total_wdev_sq_md_p75 = total(weighted_dev_sq_md_p75) if state == 24
+(71,887 missing values generated)
+
+. 
+. gen deviation_us_p75 = kfr_pooled_p75 - weight_mean_kfr_us_p75 if !missi
+> ng(kfr_pooled_p75)
+(1,266 missing values generated)
+
+. gen weighted_dev_sq_us_p75 = deviation_us_p75^2 * count_pooled if !missi
+> ng(deviation_us_p75)
+(1,328 missing values generated)
+
+. egen total_wdev_sq_us_p75 = total(weighted_dev_sq_us_p75)
+
+. 
+. * Calculate the total weights and the total weighted sum of squared devi
+> ations for the 75th percentile for Baltimore County, Maryland, and the U
+> S
+. sum count_pooled if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |        200     806.755    404.1614         13       1788
+
+. local total_weight_balt_p75 = r(sum)
+
+. sum weighted_dev_sq_balt_p75 if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+w~q_balt_p75 |        199    6.59e+10    9.88e+10    3577039   6.92e+11
+
+. local total_dev_sq_balt_p75 = r(sum)
+
+. 
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_weight_md_p75 = r(sum)
+
+. sum weighted_dev_sq_md_p75 if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+wei~q_md_p75 |      1,383    9.78e+10    1.51e+11   19118.56   1.55e+12
+
+. local total_dev_sq_md_p75 = r(sum)
+
+. 
+. sum count_pooled
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_weight_us_p75 = r(sum)
+
+. sum weighted_dev_sq_us_p75
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+wei~q_us_p75 |     71,950    8.73e+10    1.56e+11          0   4.01e+12
+
+. local total_dev_sq_us_p75 = r(sum)
+
+. 
+. * Calculate the weighted standard deviation for the 75th percentile for 
+> Baltimore County, Maryland, and the US
+. local std_dev_balt_p75 = sqrt(`total_dev_sq_balt_p75' / `total_weight_ba
+> lt_p75')
+
+. local std_dev_md_p75 = sqrt(`total_dev_sq_md_p75' / `total_weight_md_p75
+> ')
+
+. local std_dev_us_p75 = sqrt(`total_dev_sq_us_p75' / `total_weight_us_p75
+> ')
+
+. 
+. * Display the results
+. display "Weighted Standard Deviation for Baltimore County at the 75th pe
+> rcentile: " `std_dev_balt_p75'
+Weighted Standard Deviation for Baltimore County at the 75th percentile: 9
+> 014.0373
+
+. display "Weighted Standard Deviation for Maryland State at the 75th perc
+> entile: " `std_dev_md_p75'
+Weighted Standard Deviation for Maryland State at the 75th percentile: 998
+> 4.7755
+
+. display "Weighted Standard Deviation for U.S. at the 75th percentile: " 
+> `std_dev_us_p75'
+Weighted Standard Deviation for U.S. at the 75th percentile: 9323.6403
+
+. 
+. * Calculate the average downward mobility for children with parents at t
+> he 100th percentile (kfr_pooled_p100) in Tract 24510130600, Hampden, Bal
+> timore, MD
+. sum kfr_pooled_p100 if state == 24 & county == 510 & tract == 130600 [aw
+>  = count_pooled ]
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_pool~100 |       1         738    89514.55          .   89514.55   895
+> 14.55
+
+. local tract_weighted_avg_p100 = r(mean)
+
+. 
+. * Calculate the population-weighted average of "kfr_pooled_p100" for Mar
+> yland
+. sum kfr_pooled_p100 if state == 24 [aw=count_pooled] 
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_pool~100 |   1,382     1355639    69329.33   15232.73   17359.49   155
+> 613.6
+
+. local weighted_sum_maryland = r(sum)
+
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_count_maryland = r(sum)
+
+. local maryland_weighted_avg = `weighted_sum_maryland' / `total_count_mar
+> yland'
+
+. display "The population-weighted average kfr_pooled_p100 for Maryland is
+>  `maryland_weighted_avg'"
+The population-weighted average kfr_pooled_p100 for Maryland is 69302.7506
+> 2909607
+
+. 
+. * Calculate the population-weighted average of "kfr_pooled_p100" for the
+>  entire U.S.
+. sum kfr_pooled_p100 [aw=count_pooled]
+
+    Variable |     Obs      Weight        Mean   Std. dev.       Min      
+>   Max
+-------------+------------------------------------------------------------
+> -----
+kfr_pool~100 |  71,886    72215136    69218.15   16362.81          0     9
+> 80579
+
+. local weighted_sum_us = r(sum)
+
+. sum count_pooled
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_count_us = r(sum)
+
+. local us_weighted_avg = `weighted_sum_us' / `total_count_us'
+
+. 
+. * Display results
+. display "The population-weighted average kfr_pooled_p100 for Tract 24510
+> 130600 is `tract_weighted_avg_p100'"
+The population-weighted average kfr_pooled_p100 for Tract 24510130600 is 8
+> 9514.546875
+
+. display "The population-weighted average kfr_pooled_p100 for Maryland is
+>  `maryland_weighted_avg'"
+The population-weighted average kfr_pooled_p100 for Maryland is 69302.7506
+> 2909607
+
+. display "The population-weighted average kfr_pooled_p100 for the U.S. is
+>  `us_weighted_avg'"
+The population-weighted average kfr_pooled_p100 for the U.S. is 69168.0689
+> 9680613
+
+. 
+. * Calculate the weighted kfr for each observation for the 100th percenti
+> le
+. gen weighted_kfr_p100 = kfr_pooled_p100 * count_pooled if !missing(kfr_p
+> ooled_p100) & !missing(count_pooled)
+(1,368 missing values generated)
+
+. 
+. * Calculate the weighted mean of kfr for the 100th percentile for Baltim
+> ore County, Maryland, and the US
+. egen sum_weighted_kfr_balt_p100 = total(weighted_kfr_p100) if state == 2
+> 4 & county == 510
+(73,078 missing values generated)
+
+. egen sum_weights_balt_p100 = total(count_pooled) if state == 24 & county
+>  == 510
+(73,078 missing values generated)
+
+. gen weight_mean_kfr_balt_p100 = sum_weighted_kfr_balt_p100 / sum_weights
+> _balt_p100 if !missing(sum_weights_balt_p100)
+(73,078 missing values generated)
+
+. 
+. egen sum_weighted_kfr_md_p100 = total(weighted_kfr_p100) if state == 24
+(71,887 missing values generated)
+
+. egen sum_weights_md_p100 = total(count_pooled) if state == 24
+(71,887 missing values generated)
+
+. gen weight_mean_kfr_md_p100 = sum_weighted_kfr_md_p100 / sum_weights_md_
+> p100 if !missing(sum_weights_md_p100)
+(71,887 missing values generated)
+
+. 
+. egen sum_weighted_kfr_us_p100 = total(weighted_kfr_p100)
+
+. egen sum_weights_us_p100 = total(count_pooled)
+
+. gen weight_mean_kfr_us_p100 = sum_weighted_kfr_us_p100 / sum_weights_us_
+> p100 if !missing(sum_weights_us_p100)
+
+. 
+. * Calculate the deviation and weighted sum of squared deviations for the
+>  100th percentile for Baltimore County, Maryland, and the US
+. gen deviation_balt_p100 = kfr_pooled_p100 - weight_mean_kfr_balt_p100 if
+>  state == 24 & county == 510 & !missing(kfr_pooled_p100)
+(73,079 missing values generated)
+
+. gen weighted_dev_sq_balt_p100 = deviation_balt_p100^2 * count_pooled if 
+> state == 24 & county == 510 & !missing(deviation_balt_p100)
+(73,079 missing values generated)
+
+. egen total_wdev_sq_balt_p100 = total(weighted_dev_sq_balt_p100) if state
+>  == 24 & county == 510
+(73,078 missing values generated)
+
+. 
+. gen deviation_md_p100 = kfr_pooled_p100 - weight_mean_kfr_md_p100 if sta
+> te == 24 & !missing(kfr_pooled_p100)
+(71,896 missing values generated)
+
+. gen weighted_dev_sq_md_p100 = deviation_md_p100^2 * count_pooled if stat
+> e == 24 & !missing(deviation_md_p100)
+(71,896 missing values generated)
+
+. egen total_wdev_sq_md_p100 = total(weighted_dev_sq_md_p100) if state == 
+> 24
+(71,887 missing values generated)
+
+. 
+. gen deviation_us_p100 = kfr_pooled_p100 - weight_mean_kfr_us_p100 if !mi
+> ssing(kfr_pooled_p100)
+(1,310 missing values generated)
+
+. gen weighted_dev_sq_us_p100 = deviation_us_p100^2 * count_pooled if !mis
+> sing(deviation_us_p100)
+(1,368 missing values generated)
+
+. egen total_wdev_sq_us_p100 = total(weighted_dev_sq_us_p100)
+
+. 
+. * Calculate the total weights and the total weighted sum of squared devi
+> ations for the 100th percentile for Baltimore County, Maryland, and the 
+> US
+. sum count_pooled if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |        200     806.755    404.1614         13       1788
+
+. local total_weight_balt_p100 = r(sum)
+
+. sum weighted_dev_sq_balt_p100 if state == 24 & county == 510
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+weighted_d.. |        199    2.03e+11    2.56e+11   1.09e+07   1.40e+12
+
+. local total_dev_sq_balt_p100 = r(sum)
+
+. 
+. sum count_pooled if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |      1,391    974.9526    451.4959          0       2835
+
+. local total_weight_md_p100 = r(sum)
+
+. sum weighted_dev_sq_md_p100 if state == 24
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+we~q_md_p100 |      1,382    2.27e+11    3.32e+11     172352   3.20e+12
+
+. local total_dev_sq_md_p100 = r(sum)
+
+. 
+. sum count_pooled
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+count_pooled |     72,451    997.4661    503.4013          0       8441
+
+. local total_weight_us_p100 = r(sum)
+
+. sum weighted_dev_sq_us_p100
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+we~q_us_p100 |     71,910    2.69e+11    2.48e+12          0   3.05e+14
+
+. local total_dev_sq_us_p100 = r(sum)
+
+. 
+. * Calculate the weighted standard deviation for the 100th percentile for
+>  Baltimore County, Maryland, and the US
+. local std_dev_balt_p100 = sqrt(`total_dev_sq_balt_p100' / `total_weight_
+> balt_p100')
+
+. local std_dev_md_p100 = sqrt(`total_dev_sq_md_p100' / `total_weight_md_p
+> 100')
+
+. local std_dev_us_p100 = sqrt(`total_dev_sq_us_p100' / `total_weight_us_p
+> 100')
+
+. 
+. * Display the results
+. display "Weighted Standard Deviation for Baltimore County at the 100th p
+> ercentile: " `std_dev_balt_p100'
+Weighted Standard Deviation for Baltimore County at the 100th percentile: 
+> 15834.469
+
+. display "Weighted Standard Deviation for Maryland State at the 100th per
+> centile: " `std_dev_md_p100'
+Weighted Standard Deviation for Maryland State at the 100th percentile: 15
+> 224.321
+
+. display "Weighted Standard Deviation for U.S. at the 100th percentile: "
+>  `std_dev_us_p100'
+Weighted Standard Deviation for U.S. at the 100th percentile: 16356.85
+
+. 
+. * Question 6: Regression Analysis & Visualization
+. * -----------------------------------
+. * Estimate the relationship between 25th and 75th percentile outcomes
+. 
+. * Regress the dependent variable kfr_pooled_p75 on the independent varia
+> ble kfr_pooled_p25, using robust standard errors to control for heterosk
+> edasticity
+. reg kfr_pooled_p75 kfr_pooled_p25, robust
+
+Linear regression                               Number of obs     =     72
+> ,009
+                                                F(1, 72007)       =   5123
+> 5.96
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 5331
+                                                Root MSE          =     64
+> 83.6
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+kfr_poole~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+kfr_poole~25 |   .8482057   .0037473   226.35   0.000     .8408611    .855
+> 5503
+       _cons |   22285.25   133.6277   166.77   0.000     22023.34    2254
+> 7.16
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Generate a scatter plot to visualize the regression
+. twoway (scatter kfr_pooled_p75 kfr_pooled_p25) (lfit kfr_pooled_p75 kfr_
+> pooled_p25), title("Relationship Between 25th and 75th Percentile Outcom
+> es") xtitle("Children Outcomes at 25th Percentile") ytitle("Children Out
+> comes at 75th Percentile") legend(label(1 "Data Points") label(2 "Fitted
+>  Line"))
+
+. 
+. * Save the graph
+. graph export "`datapath'figures_helen/figure2.png", replace
+file /Users/yyy/Desktop/project1/figures_helen/figure2.png saved as PNG
+    format
+
+. 
+. * Question 7: Regression Analysis & Visualization
+. * -----------------------------------
+. * Estimate the relationship between 25th and 75th percentile outcomes fo
+> r white  and black children
+. 
+. * Regression of outcomes at the 75th percentile on outcomes at the 25th 
+> percentile for white children
+. regress kfr_white_p75 kfr_white_p25, robust
+
+Linear regression                               Number of obs     =     67
+> ,966
+                                                F(1, 67964)       =   1187
+> 1.77
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 2690
+                                                Root MSE          =     87
+> 06.9
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+kfr_white~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+kfr_white~25 |   .5976962   .0054856   108.96   0.000     .5869445     .60
+> 8448
+       _cons |   32169.37   216.8765   148.33   0.000      31744.3    3259
+> 4.45
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Generate a scatter plot to visualize the regression
+. twoway (scatter kfr_white_p75 kfr_white_p25) (lfit kfr_white_p75 kfr_whi
+> te_p25), title("White Children: 25th vs. 75th Percentile Outcomes") xtit
+> le("White Children Outcomes at 25th Percentile") ytitle("White Children 
+> Outcomes at 75th Percentile") legend(label(1 "Data Points") label(2 "Fit
+> ted Line"))
+
+. 
+. * Save the graph
+. graph export "`datapath'figures_helen/figure3.png", replace
+file /Users/yyy/Desktop/project1/figures_helen/figure3.png saved as PNG
+    format
+
+. 
+. * Regression of outcomes at the 75th percentile on outcomes at the 25th 
+> percentile for black children
+. regress kfr_black_p75 kfr_black_p25, robust
+
+Linear regression                               Number of obs     =     34
+> ,047
+                                                F(1, 34045)       =      1
+> 8.05
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 0857
+                                                Root MSE          =      1
+> 2726
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+kfr_black~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+kfr_black~25 |   .4716661    .111007     4.25   0.000     .2540885    .689
+> 2436
+       _cons |   24488.15   2749.622     8.91   0.000      19098.8     298
+> 77.5
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Generate a scatter plot to visualize the regression
+. twoway (scatter kfr_black_p75 kfr_black_p25) (lfit kfr_black_p75 kfr_bla
+> ck_p25), title("Black Children: 25th vs. 75th Percentile Outcomes") xtit
+> le("Black Children Outcomes at 25th Percentile") ytitle("Black Children 
+> Outcomes at 75th Percentile") legend(label(1 "Data Points") label(2 "Fit
+> ted Line"))
+
+. 
+. * Save the graph
+. graph export "`datapath'figures_helen/figure4.png", replace
+file /Users/yyy/Desktop/project1/figures_helen/figure4.png saved as PNG
+    format
+
+. 
+. * Section 8: Covariate Analysis
+. * -----------------------------
+. * Examine covariates and their correlation with upward mobility
+. 
+. * Standardize variables
+. egen std_kfr_pooled_p25 = std(kfr_pooled_p25)
+(1,267 missing values generated)
+
+. egen std_kfr_pooled_p75 = std(kfr_pooled_p75)
+(1,266 missing values generated)
+
+. egen std_rent_twobed2015 = std(rent_twobed2015)
+(16,671 missing values generated)
+
+. egen std_singleparent_share2010 = std(singleparent_share2010)
+(714 missing values generated)
+
+. egen std_job_density_2013 = std(job_density_2013)
+(815 missing values generated)
+
+. 
+. * Regression of 25th percentile outcomes on the rent for a two-bedroom i
+> n 2015, the share of single parents in 2010, the job density in 2013
+. regress std_kfr_pooled_p25 std_rent_twobed2015, robust
+
+Linear regression                               Number of obs     =     56
+> ,131
+                                                F(1, 56129)       =    516
+> 1.59
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 1254
+                                                Root MSE          =      .
+> 8908
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~25 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_ren~2015 |   .3387374   .0047149    71.84   0.000     .3294961    .347
+> 9786
+       _cons |  -.0708961   .0037569   -18.87   0.000    -.0782596   -.063
+> 5326
+--------------------------------------------------------------------------
+> ----
+
+. regress std_kfr_pooled_p25 std_singleparent_share2010, robust
+
+Linear regression                               Number of obs     =     71
+> ,751
+                                                F(1, 71749)       =   3174
+> 8.72
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 3194
+                                                Root MSE          =     .8
+> 2248
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~25 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_sin~2010 |  -.5649764   .0031708  -178.18   0.000    -.5711911   -.558
+> 7617
+       _cons |  -.0031694   .0030653    -1.03   0.301    -.0091774    .002
+> 8385
+--------------------------------------------------------------------------
+> ----
+
+. regress std_kfr_pooled_p25 std_job_density_2013, robust
+
+Linear regression                               Number of obs     =     71
+> ,948
+                                                F(1, 71946)       =       
+> 2.49
+                                                Prob > F          =     0.
+> 1145
+                                                R-squared         =     0.
+> 0001
+                                                Root MSE          =     .9
+> 9853
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~25 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_job~2013 |  -.0085622    .005425    -1.58   0.115    -.0191951    .002
+> 0707
+       _cons |   .0012711   .0037227     0.34   0.733    -.0060254    .008
+> 5676
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Regression of 75th percentile outcomes on the rent for a two-bedroom i
+> n 2015, the share of single parents in 2010, the job density in 2013
+. regress std_kfr_pooled_p75 std_rent_twobed2015, robust
+
+Linear regression                               Number of obs     =     56
+> ,130
+                                                F(1, 56128)       =     94
+> 3.69
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 0169
+                                                Root MSE          =     .9
+> 7442
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_ren~2015 |   .1283829   .0041792    30.72   0.000     .1201916    .136
+> 5741
+       _cons |  -.0473408   .0041171   -11.50   0.000    -.0554104   -.039
+> 2712
+--------------------------------------------------------------------------
+> ----
+
+. regress std_kfr_pooled_p75 std_singleparent_share2010, robust
+
+Linear regression                               Number of obs     =     71
+> ,751
+                                                F(1, 71749)       =   2282
+> 7.48
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 2979
+                                                Root MSE          =     .8
+> 3548
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_sin~2010 |  -.5456993   .0036118  -151.09   0.000    -.5527785   -.538
+> 6202
+       _cons |  -.0020963   .0031221    -0.67   0.502    -.0082155     .00
+> 4023
+--------------------------------------------------------------------------
+> ----
+
+. regress std_kfr_pooled_p75 std_job_density_2013, robust
+
+Linear regression                               Number of obs     =     71
+> ,951
+                                                F(1, 71949)       =       
+> 6.77
+                                                Prob > F          =     0.
+> 0093
+                                                R-squared         =     0.
+> 0006
+                                                Root MSE          =     .9
+> 9603
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_job~2013 |  -.0242595   .0093242    -2.60   0.009    -.0425349   -.005
+> 9842
+       _cons |   .0017229   .0037133     0.46   0.643    -.0055553     .00
+> 9001
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Section 9: Hypothesis Testing
+. * -----------------------------
+. * Formulate and test a hypothesis about variation in upward mobility
+. 
+. * Regression of 25th and 75th percentile outcomes on the fraction of res
+> idents with a college degree or more in 2010
+. egen std_frac_coll_plus2010 = std(frac_coll_plus2010)
+(285 missing values generated)
+
+. regress std_kfr_pooled_p25 std_frac_coll_plus2010, robust
+
+Linear regression                               Number of obs     =     71
+> ,971
+                                                F(1, 71969)       =   1634
+> 9.17
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 2472
+                                                Root MSE          =      .
+> 8671
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~25 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_fra~2010 |   .4978759   .0038938   127.86   0.000     .4902441    .505
+> 5078
+       _cons |  -.0005562     .00323    -0.17   0.863    -.0068871    .005
+> 7747
+--------------------------------------------------------------------------
+> ----
+
+. regress std_kfr_pooled_p75 std_frac_coll_plus2010, robust
+
+Linear regression                               Number of obs     =     71
+> ,971
+                                                F(1, 71969)       =   1278
+> 7.16
+                                                Prob > F          =     0.
+> 0000
+                                                R-squared         =     0.
+> 1535
+                                                Root MSE          =       
+> .919
+
+--------------------------------------------------------------------------
+> ----
+             |               Robust
+std_kfr_p~75 | Coefficient  std. err.      t    P>|t|     [95% conf. inter
+> val]
+-------------+------------------------------------------------------------
+> ----
+std_fra~2010 |   .3920705   .0034672   113.08   0.000     .3852748    .398
+> 8661
+       _cons |  -.0000274   .0034273    -0.01   0.994     -.006745    .006
+> 6901
+--------------------------------------------------------------------------
+> ----
+
+. 
+. * Cleanup and close
+. * -----------------------------------
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/yyy/Desktop/project1/empiricalproject1_helen.log
+  log type:  text
+ closed on:   7 Dec 2023, 17:17:21
+--------------------------------------------------------------------------
